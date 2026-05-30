@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>Products</title>
+</head>
+<body>
+  <h1>Produits</h1>
+  <div id="products-list"></div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    const socket = io();
+    const list = document.getElementById("products-list");
+
+    function renderCard(product) {
+      return `
+        <div id="product-${product._id}">
+          <h2>${product.name}</h2>
+          <p>${product.about}</p>
+          <p>${product.price.toFixed(2)} €</p>
+        </div>
+      `;
+    }
+
+    async function loadProducts() {
+      const res = await fetch("/products");
+      const products = await res.json();
+      list.innerHTML = products.map(p => renderCard(p)).join("");
+    }
+
+    loadProducts();
+
+    socket.on("products", ({ event, product, productId }) => {
+      if (event === "created") {
+        list.insertAdjacentHTML("afterbegin", renderCard(product));
+      }
+
+      if (event === "updated") {
+        const card = document.getElementById(`product-${product._id}`);
+        if (card) card.outerHTML = renderCard(product);
+      }
+
+      if (event === "deleted") {
+        const card = document.getElementById(`product-${productId}`);
+        if (card) card.remove();
+      }
+    });
+  </script>
+</body>
+</html>
