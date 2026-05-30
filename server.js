@@ -36,7 +36,7 @@ app.post("/products", async (req, res) => {
 
     const ack = await db
       .collection("products")
-      .insertOne({ name, about, price, categoryId: categoryObjectIds });
+      .insertOne({ name, about, price, categoryIds: categoryObjectIds });
 
     res.send({ _id: ack.insertedId, name, about, price, categoryId: categoryObjectIds });
   } else {
@@ -63,6 +63,104 @@ app.get("/products", async (req, res) => {
   res.send(result);
 });
 
+app.get("/products/:id", async (req, res) => {
+  try {
+    const product = await db
+      .collection("products")
+      .aggregate([
+        { $match: { _id: new ObjectId(req.params.id) } },
+        {
+          $lookup: {
+            from: "categories",
+            localField: "categoryIds",
+            foreignField: "_id",
+            as: "categories",
+          },
+        },
+      ])
+      .toArray();
+
+    if (product.length === 0) {
+      return res.status(404).send({ message: "Produit non trouvé" });
+    }
+    res.send(product[0]);
+  } catch (error) {
+    res.status(400).send({ message: "ID invalide" });
+  }
+});
+
+app.put("/products/:id", async (req, res) => {
+  try {
+    const result = CreateProductSchema.safeParse(req.body);
+    if (!result.success) {
+      return res.status(400).send(result);
+    }
+
+    const { name, about, price, categoryIds } = result.data;
+    const categoryObjectIds = categoryIds.map((id) => new ObjectId(id));
+
+    const ack = await db.collection("products").findOneAndUpdate(
+      { _id: new ObjectId(req.params.id) },
+      { $set: { name, about, price, categoryIds: categoryObjectIds } },
+      { returnDocument: "after" }
+    );
+
+    if (!ack) {
+      return res.status(404).send({ message: "Produit non trouvé" });
+    }
+    res.send(ack);
+  } catch (error) {
+    res.status(400).send({ message: "ID invalide" });
+  }
+});
+
+app.patch("/products/:id", async (req, res) => {
+  try {
+    const result = CreateProductSchema.partial().safeParse(req.body);
+    if (!result.success) {
+      return res.status(400).send(result);
+    }
+
+    const updateData = result.data;
+    if (Object.keys(updateData).length === 0) {
+      return res.status(400).send({ message: "Aucun champ fourni" });
+    }
+
+    if (updateData.categoryIds) {
+      updateData.categoryIds = updateData.categoryIds.map((id) => new ObjectId(id));
+    }
+
+    const ack = await db.collection("products").findOneAndUpdate(
+      { _id: new ObjectId(req.params.id) },
+      { $set: updateData },
+      { returnDocument: "after" }
+    );
+
+    if (!ack) {
+      return res.status(404).send({ message: "Produit non trouvé" });
+    }
+    res.send(ack);
+  } catch (error) {
+    res.status(400).send({ message: "ID invalide" });
+  }
+});
+
+app.delete("/products/:id", async (req, res) => {
+  try {
+    const ack = await db
+      .collection("products")
+      .findOneAndDelete({ _id: new ObjectId(req.params.id) });
+
+    if (!ack) {
+      return res.status(404).send({ message: "Produit non trouvé" });
+    }
+    res.send(ack);
+  } catch (error) {
+    res.status(400).send({ message: "ID invalide" });
+  }
+});
+
+
 app.post("/categories", async (req, res) => {
   const result = await CreateCategorySchema.safeParse(req.body);
 
@@ -77,9 +175,7 @@ app.post("/categories", async (req, res) => {
   }
 });
 
-// Init mongodb client connection
 client.connect().then(() => {
-  // Select db to use in mongodb
   db = client.db("myDB");
   app.listen(port, () => {
     console.log(`Listening on http://localhost:${port}`);
