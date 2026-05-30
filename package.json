@@ -1,0 +1,25 @@
+{
+  "name": "webservicetp3",
+  "version": "1.0.0",
+  "description": "",
+  "homepage": "https://github.com/SHACRAM/webserviceTP3#readme",
+  "bugs": {
+    "url": "https://github.com/SHACRAM/webserviceTP3/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/SHACRAM/webserviceTP3.git"
+  },
+  "license": "ISC",
+  "author": "",
+  "type": "commonjs",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "dependencies": {
+    "express": "^4.22.2",
+    "mongodb": "^7.2.0",
+    "zod": "^4.4.3"
+  }
+}
